@@ -1,26 +1,34 @@
 require(data.table)
 require(dplyr)
 
+if(!dir.exists("UCI HAR Dataset"))
+{
+  dir.create("UCI HAR Dataset")
+  download.file(url="https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip",destfile="temp.zip")
+  unzip("temp.zip")
+  file.remove("temp.zip")
+  }
+
 #Read Observations for Training Data
-xtrain<-read.table("./train/X_train.txt",sep="",header=FALSE)
+xtrain<-read.table("./UCI HAR Dataset/train/X_train.txt",sep="",header=FALSE)
 #Activity Labels
-ytrain<-read.table("./train/Y_train.txt",sep="\t",header=FALSE)
+ytrain<-read.table("./UCI HAR Dataset/train/Y_train.txt",sep="\t",header=FALSE)
 #Subject IDs
-subjtrain<-read.table("./train/subject_train.txt",sep="\t",header=FALSE)
+subjtrain<-read.table("./UCI HAR Dataset/train/subject_train.txt",sep="\t",header=FALSE)
 #Create a single data table for training data
 train<-cbind(subjtrain,ytrain,xtrain)
 
 #Do the same as above for the test data
-xtest<-read.table("./test/X_test.txt",sep="",header=FALSE)
-ytest<-read.table("./test/Y_test.txt",sep="\t",header=FALSE)
-subjtest<-read.table("./test/subject_test.txt",sep="\t",header=FALSE)
+xtest<-read.table("./UCI HAR Dataset/test/X_test.txt",sep="",header=FALSE)
+ytest<-read.table("./UCI HAR Dataset/test/Y_test.txt",sep="\t",header=FALSE)
+subjtest<-read.table("./UCI HAR Dataset/test/subject_test.txt",sep="\t",header=FALSE)
 test<-cbind(subjtest,ytest,xtest)
 
 #Merge the train and test data
 merged<-rbind(train,test)
 
 #Load column names from the features file
-features<-read.table("features.txt",header=FALSE,stringsAsFactors = FALSE)
+features<-read.table("./UCI HAR Dataset/features.txt",header=FALSE,stringsAsFactors = FALSE)
 cols<-features[,2]
 cols<-make.names(c("SubjectID","Activity",cols),unique=TRUE)
 colnames(merged)<-cols
@@ -35,18 +43,22 @@ smaller<-select(merged,cols2)
 
 
 #Create a vector of Activity Labels and Names
-labels<-read.table("activity_labels.txt",header=FALSE)
+labels<-read.table("./UCI HAR Dataset/activity_labels.txt",header=FALSE)
 #Replace Activity Labels with Activity Names
 smaller$Activity<-labels$V2[smaller$Activity]
 
 #Tidy the column names
-colnames(smaller)<-sub("^t","time.",colnames(smaller))
-colnames(smaller)<-sub("^f","freq.",colnames(smaller))
+colnames(smaller)<-sub("^t","TimeDomain.",colnames(smaller))
+colnames(smaller)<-sub("^f","FrequencyDomain.",colnames(smaller))
+colnames(smaller)<-sub("Acc","Accelerometer",colnames(smaller))
+colnames(smaller)<-sub("Gyro","Gyroscope",colnames(smaller))
+colnames(smaller)<-sub("Mag","Magnitude",colnames(smaller))
 colnames(smaller)<-gsub("..","",colnames(smaller),fixed=TRUE)
 
 # Group the data by SubjectID and Activity
 grouped<-group_by(as_tibble(smaller),SubjectID,Activity)
 # Create the tidy data
 tidy<-summarize_all(grouped,funs(mean))
-write.table(tidy)
+#Save tidy data to the file tidy.txt
+write.table(tidy,file="tidy.txt",row.names=FALSE)
 
